@@ -6,6 +6,8 @@ auto-update your cluster: sync your docker images and restart pods running on ol
 
 *bad things could happen: service downtime, permanent pod restarts, hailstorms, ... You have been warned!*
 
+find the current chart index at [https://arnehilmann.github.io/k8s-auto-updater/index.yaml]
+(https://arnehilmann.github.io/k8s-auto-updater/index.yaml)
 
 ## Description
 
