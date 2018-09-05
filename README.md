@@ -2,30 +2,31 @@
 
 auto-update your cluster: sync your docker images and restart pods running on old images
 
-**DO NOT USE IN A PRODUCTION ENVIRONMENT**
+**!!! DO NOT USE IN A PRODUCTION ENVIRONMENT !!!**
 
-*bad things could happen: downtime, service outage, permanent pod restarts, hail storms, ...*
-
-*You have been warned!*
+*bad things could happen: service downtime, permanent pod restarts, hailstorms, ... You have been warned!*
 
 
 ## Description
 
 **in your cluster**
-`k8s-auto-updater` runs as a cronjob inside your kubernetes-cluster. It uses the commands `docker` and `kubectl`, has
-access to the docker socket via hostpath (and thus access to the docker daemon of the corresponding node),
+`k8s-auto-updater` runs as a cronjob inside your kubernetes-cluster.
+
+**with the authority**
+`k8s-auto-updater` uses the commands `docker` and `kubectl`, has
+access to the docker socket (and thus full access to the docker daemon of the corresponding node),
 is allowed to list, get, and delete pods and to get secrets (per RBAC definition).
 
-**gathering pods**
-It fetches all image names used by the pods in the current namespace.
+**gathering image names**
+`k8s-auto-updater` fetches all image names used by the pods in its namespace.
 
 **syncing images**
-Then it pull all images, updating the local docker registry if the image in the remote registry has changed.
+Then it pulls all images, updating the local docker registry if the image in the remote registry has changed.
 
 **deleting pods**
-Now the `k8s-auto-updater` iterates over all pods again, checking if the image id the pod was started on equals
-the image id referenced by the image name. If the image id of the pod differs, the pod gets deleted and a
-new pod gets created (hopefully) using the new image.
+Then `k8s-auto-updater` iterates over all pods (again), checking if the image id the pod was started on equals
+the image id referenced by the image name. If the image id of the pod differs, the pod gets deleted and
+(hopefully; assuming a ha-setup) a new pod gets created using the newly pulled image.
 
 
 ## tl;dr
