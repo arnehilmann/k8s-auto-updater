@@ -1,0 +1,46 @@
+#!/bin/sh
+set -e -u
+
+NAMESPACE=default
+
+PODS=$(./kubectl get pods --namespace $NAMESPACE -l app -o jsonpath={.items[*].metadata.name})
+
+echo
+echo "checking pods $PODS"
+
+for POD in $PODS; do
+    echo
+    echo "checking $POD"
+    IMAGE=$(./kubectl get pod $POD --namespace $NAMESPACE -o json | jq -r .spec.containers[0].image)
+    echo "image: $IMAGE"
+    SHA_BEFORE=$(docker inspect $IMAGE | jq '.[0].Id')
+    echo "sha before: $SHA_BEFORE"
+
+    TOKEN_NAME=$(./kubectl get pod $POD --namespace $NAMESPACE -o json | jq -r .spec.imagePullSecrets[0].name)
+    if [ x$TOKEN_NAME = "xnull" ]; then
+        echo "no pull secret found, skipping $POD"
+        continue
+    fi
+    echo "pull secret name: $TOKEN_NAME"
+    DOCKER_LOGIN=$(./kubectl get secret $TOKEN_NAME --namespace $NAMESPACE -o json | jq -r .data[] | base64 -d - | jq -r .auths | jq -r '"echo " + .[].password + " | docker login -u " + .[].username + " --password-stdin " + keys[]')
+    # echo "docker login: [redacted]"
+    eval $DOCKER_LOGIN || continue
+
+    if docker pull $IMAGE; then
+        echo "image pull successfull"
+        SHA_AFTER=$(docker inspect $IMAGE | jq '.[0].Id')
+        echo "sha after: $SHA_AFTER"
+        if [ x$SHA_BEFORE != x$SHA_AFTER ]; then
+            echo "update found for $IMAGE"
+            echo "consider deleting pod $POD"
+            ./kubectl delete pod $POD --namespace $NAMESPACE
+        else
+            echo "no update found, leaving pod $POD untouched."
+        fi
+    else
+        echo "cannot pull $IMAGE, skipping..."
+    fi
+done
+
+echo
+echo "done."
