@@ -47,6 +47,20 @@ helm install --name auto-updater k8s-a-u-chart/k8s-auto-updater
 ```
 
 
+## config
+
+The following parameter could be set via `--set`:
+
+parameter | default | description
+--------- | ------- | -----------
+schedule | \*/10 \* \* \* \* | when to run `k8s-auto-updater`, uses [cron syntax](https://en.wikipedia.org/wiki/Cron#Overview)
+suspend  | false             | should `k8s-auto-updater` run on startup or stay in suspend mode
+
+*example*
+```
+helm install --name auto-updater k8s-a-u-chart/k8s-auto-updater --set schedule="*/2 * * * *"  # run every two minutes
+```
+
 ## cleanup
 
 ```
