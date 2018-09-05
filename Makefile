@@ -1,6 +1,8 @@
 
 
-all:	package repo
+all:	chart image
+
+chart:	package repo
 
 repo:	docs/index.yaml
 
@@ -18,4 +20,8 @@ templates/scripts.yaml:	src/sync-pods
     	--from-file $< \
     	--dry-run -o yaml > $@
 
-.PHONY: clean package repo all
+image:	docker/
+	docker build -t arne/kubectldocker:latest docker
+	docker push arne/kubectldocker:latest
+
+.PHONY: package repo all image
