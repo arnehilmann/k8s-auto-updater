@@ -1,3 +1,16 @@
 apiVersion: v1
 name: k8s-auto-updater
-version: 0.0.2
+version: 0.0.3
+
+description: "auto-update your cluster: sync your docker images and restart pods running on old images"
+keywords:
+  - cluster
+  - update
+  - images
+  - pods
+home: https://github.com/arnehilmann/k8s-auto-updater
+sources:
+  - https://github.com/arnehilmann/k8s-auto-updater
+maintainers:
+  - name: arnehilmann
+    email: arne.hilmann@gmail.com

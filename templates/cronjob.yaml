@@ -5,7 +5,8 @@ metadata:
     app: auto-updater-cronjob
   name: auto-updater-cronjob
 spec:
-  schedule: "*/1 * * * *"
+  schedule: {{ .Values.schedule | quote }}
+  suspend: {{ .Values.suspend }}
   concurrencyPolicy: Forbid
   jobTemplate:
     spec:

@@ -32,7 +32,7 @@ the image id referenced by the image name. If the image id of the pod differs, t
 ## tl;dr
 
 ```
-helm install --name auto-updater https://arnehilmann.github.io/k8s-auto-updater/k8s-auto-updater-0.0.2.tgz
+helm install --name auto-updater https://arnehilmann.github.io/k8s-auto-updater/k8s-auto-updater-0.0.3.tgz
 # cross fingers
 ```
 
