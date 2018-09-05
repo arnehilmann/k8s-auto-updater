@@ -61,9 +61,16 @@ suspend  | false             | should `k8s-auto-updater` run on startup or stay 
 helm install --name auto-updater k8s-a-u-chart/k8s-auto-updater --set schedule="*/2 * * * *"  # run every two minutes
 ```
 
+
 ## cleanup
 
 ```
 helm delete auto-updater
 ```
 
+
+## TODO
+
+- [ ] allow selector for pod selection
+- [ ] allow image sync for remote registries which do not need PullSecrets
+- [ ] provide endpoint for triggering manually
