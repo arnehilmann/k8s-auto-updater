@@ -2,4 +2,5 @@ bin
 src
 docker
 ve
-
+.*
+docs
