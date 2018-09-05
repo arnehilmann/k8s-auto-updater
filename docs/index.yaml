@@ -2,10 +2,17 @@ apiVersion: v1
 entries:
   k8s-auto-updater:
   - apiVersion: v1
-    created: 2018-09-05T11:25:15.954326428+02:00
+    created: 2018-09-05T12:08:52.133320365+02:00
+    digest: 1bae2c4719ab8028993d40e67fbc05ccb2d7e2f537d8d6fee9befb29c0cd22c1
+    name: k8s-auto-updater
+    urls:
+    - k8s-auto-updater-0.0.2.tgz
+    version: 0.0.2
+  - apiVersion: v1
+    created: 2018-09-05T12:08:52.132982286+02:00
     digest: a5517ba739b7a3fef5417c5106c425b2743fdc1c7c235707f5867bff7ee84dde
     name: k8s-auto-updater
     urls:
     - k8s-auto-updater-0.0.1.tgz
     version: 0.0.1
-generated: 2018-09-05T11:25:15.952946431+02:00
+generated: 2018-09-05T12:08:52.132504664+02:00

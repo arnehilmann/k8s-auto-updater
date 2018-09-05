@@ -18,22 +18,16 @@ spec:
           serviceAccountName: auto-updater
 
           containers:
-              #- image: alpine
           - image: arne/kubectldocker
             name: auto-updater
             imagePullPolicy: Always
 
-            # command: ["/bin/sh", "-c", 'apk add curl docker jq && curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod a+rx ./kubectl && sync-images']
             command: ["/bin/sh", "-c", 'sync-pods']
 
             volumeMounts:
               - name: docker
                 mountPath: /var/run/docker.sock
                 readOnly: true
-
-              - name: scripts
-                mountPath: /usr/local/bin/sync-images
-                subPath: sync-images
 
               - name: scripts
                 mountPath: /usr/local/bin/sync-pods
@@ -51,4 +45,4 @@ spec:
 
           restartPolicy: Never
       backoffLimit: 1
-      # activeDeadlineSeconds: 300
+      activeDeadlineSeconds: 300
