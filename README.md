@@ -72,5 +72,5 @@ helm delete auto-updater
 ## TODO
 
 - [ ] allow selector for pod selection
-- [ ] allow image sync for remote registries which do not need PullSecrets
+- [x] allow image sync for remote registries which do not need PullSecrets
 - [ ] provide endpoint for triggering manually
