@@ -36,68 +36,63 @@ for image_name, pod_names in image2pods.items():
             break
         pod = kubectl.get("pods", pod_name)
         pull_secrets = pod["spec"].get("imagePullSecrets", "null")
-        if pull_secrets == "null":
-            continue
         print(pod_name)
-        for pull_secret in pull_secrets:
-            token_name = pull_secret["name"]
-            token = kubectl.get("secret", token_name)
-            secret_base64 = token["data"].get(".dockerconfigjson", "")
-            if not secret_base64:
-                continue
-            secret_dict = json.loads(base64.b64decode(secret_base64))
-            hostname = list(secret_dict["auths"].keys())[0]
-            username = secret_dict["auths"][hostname]["username"]
-            password = secret_dict["auths"][hostname]["password"]
-            try:
-                login_result = docker.login(username, password=password, registry=hostname)
-            except docker_module.errors.APIError as e:
-                print(e)
-                continue
-            login_result = docker.login(username, password=password, registry=hostname)
-            try:
-                for line in docker_api.pull(image_name, stream=True):
-                    print(json.loads(line).get("status", ""))
-            except docker_module.errors.NotFound as e:
-                print(e)
-            pulled = True
-            break
+        if pull_secrets != "null":
+            for pull_secret in pull_secrets:
+                token_name = pull_secret["name"]
+                token = kubectl.get("secret", token_name)
+                secret_base64 = token["data"].get(".dockerconfigjson", "")
+                if not secret_base64:
+                    continue
+                secret_dict = json.loads(base64.b64decode(secret_base64))
+                hostname = list(secret_dict["auths"].keys())[0]
+                username = secret_dict["auths"][hostname]["username"]
+                password = secret_dict["auths"][hostname]["password"]
+                try:
+                    login_result = docker.login(username, password=password, registry=hostname)
+                except docker_module.errors.APIError as e:
+                    print(e)
+                    continue
+        try:
+            for lines in docker_api.pull(image_name, stream=True):
+                for line in lines.splitlines():
+                    print(line)
+        except docker_module.errors.NotFound as e:
+            print(e)
+        pulled = True
+        break
 
 print("-" * 40)
 
 print("checking running pods")
 print()
 for pod in kubectl.get("pods")["items"]:
-    # pod = kubectl.get("pods")["items"][0]
-
-    # print(json.dumps(pod["spec"]["imagePullSecrets"], indent=4, sort_keys=True, default=str))
-
-    # print(json.dumps(pod["status"]["containerStatuses"], indent=4, sort_keys=True, default=str))
-    container_id = pod["status"]["containerStatuses"][0].get("containerID", "").replace("docker://", "")
     image_name = pod["status"]["containerStatuses"][0]["image"]
 
     print()
     print("%s [%s]" % (pod["metadata"]["name"], image_name))
 
     imageid_of_container = ""
-    if container_id:
-        container = docker.containers.get(container_id)
-        imageid_of_container = container.attrs["Image"]
+    try:
+        imageid_of_container = pod["status"]["containerStatuses"][0].get("imageID", "").replace("docker-pullable://", "")
+    except Exception as e:
+        print(e)
+        print("no image id for %s found in pod status, skipping..." % image_name)
+        continue
 
     imageid_from_registry = ""
     try:
         image = docker.images.get(image_name)
-        imageid_from_registry = image.attrs["Id"]
-    except docker_module.errors.ImageNotFound as e:
+        imageid_from_registry = image.attrs["RepoDigests"][0]
+    except Exception as e:
         print(e)
         print("no image id for %s found in local registry, skipping..." % image_name)
-        next
+        continue
 
     if (imageid_of_container != imageid_from_registry):
-        print("container: %s" % imageid_of_container)
-        print(" registry: %s" % imageid_from_registry)
+        print("image id of container: %s" % imageid_of_container)
+        print(" image id of registry: %s" % imageid_from_registry)
         print("IMAGE ID MISMATCH! DESTROYING %s!" % pod["metadata"]["name"])
         kubectl.delete("pod", pod["metadata"]["name"])
 
-    # import sys; sys.exit()
 print("done")
