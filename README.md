@@ -6,8 +6,8 @@ auto-update your cluster: sync your docker images and restart pods running on ol
 
 *bad things could happen: service downtime, permanent pod restarts, hailstorms, ... You have been warned!*
 
-find the current chart index at [https://arnehilmann.github.io/k8s-auto-updater/index.yaml]
-(https://arnehilmann.github.io/k8s-auto-updater/index.yaml)
+find the current chart index at
+[https://arnehilmann.github.io/k8s-auto-updater/index.yaml](https://arnehilmann.github.io/k8s-auto-updater/index.yaml)
 
 ## Description
 
@@ -41,7 +41,7 @@ helm install --name auto-updater https://arnehilmann.github.io/k8s-auto-updater/
 
 ## setup
 
-A more permanent solution would be to add this repo to your helm installation and install `k8s-auto-updater` from there:
+A more permanent setup would be to add this repo to your helm installation and install `k8s-auto-updater` from there:
 
 ```
 helm repo add k8s-a-u-chart https://arnehilmann.github.io/k8s-auto-updater/
@@ -51,14 +51,14 @@ helm install --name auto-updater k8s-a-u-chart/k8s-auto-updater
 
 ## config
 
-The following parameter could be set via `--set`:
+The following parameters could be set via `--set`:
 
 parameter | default | description
 --------- | ------- | -----------
 schedule | \*/10 \* \* \* \* | when to run `k8s-auto-updater`, uses [cron syntax](https://en.wikipedia.org/wiki/Cron#Overview)
 suspend  | false             | should `k8s-auto-updater` run on startup or stay in suspend mode
 
-*example*
+**example:**
 ```
 helm install --name auto-updater k8s-a-u-chart/k8s-auto-updater --set schedule="*/2 * * * *"  # run every two minutes
 ```
