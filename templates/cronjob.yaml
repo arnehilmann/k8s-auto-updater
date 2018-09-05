@@ -23,7 +23,8 @@ spec:
             name: auto-updater
             imagePullPolicy: Always
 
-            command: ["/bin/sh", "-c", 'sync-pods']
+            # command: ["sleep", "356d"]
+            command: ["sync-pods"]
 
             volumeMounts:
               - name: docker
