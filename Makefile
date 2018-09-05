@@ -9,7 +9,7 @@ repo:	docs/index.yaml
 docs/index.yaml:	docs/*.tgz
 	helm repo index docs --merge docs/index.yaml
 
-package:
+package:	templates/scripts.yaml
 	rm -rf tmp && mkdir -p tmp
 	helm package . -d tmp
 	mv -nv tmp/* docs/
