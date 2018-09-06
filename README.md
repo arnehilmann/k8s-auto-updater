@@ -76,3 +76,4 @@ helm delete auto-updater
 - [ ] allow selector for pod selection
 - [x] allow image sync for remote registries which do not need PullSecrets
 - [ ] provide endpoint for triggering manually
+- [ ] only delete pod when image pull enabled (imageTag eq latest or imagePullPolicy Always)
