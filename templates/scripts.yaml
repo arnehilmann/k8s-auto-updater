@@ -5,100 +5,109 @@ data:
 
     from kubepy import api as kubectl
     import json
-    import docker as docker_module
     import base64
+    import subprocess
+    import json
+    import re
 
-    print("syncing pods and images against local and remote registry")
-    print()
+    print("\nsyncing pods and images against local and remote registry\n")
 
-    docker = docker_module.from_env()
-    docker_api = docker.api
+    print("\nfetching pods, current repodigest and image name")
 
-    print("fetching pods and their current images")
-    print()
-
-    image2pods = {}
+    image2digest2pods = {}
     for pod in kubectl.get("pods")["items"]:
         image_name = pod["status"]["containerStatuses"][0]["image"]
-        pod_name = pod["metadata"]["name"]
-        if not image_name in image2pods:
-            image2pods[image_name] = []
-        image2pods[image_name].append(pod_name)
+        digest = re.sub("^.*@", "", pod["status"]["containerStatuses"][0].get("imageID", ""))
 
-    # print(json.dumps(image2pods, indent=4, sort_keys=True))
+        if not image_name in image2digest2pods:
+            image2digest2pods[image_name] = {}
+        if not digest in image2digest2pods[image_name]:
+            image2digest2pods[image_name][digest] = []
 
-    print("-" * 40)
-    print("pulling images from remote registry")
-    print()
-
-    for image_name, pod_names in image2pods.items():
-        print()
-        pulled = False
-        for pod_name in pod_names:
-            if pulled:
-                break
-            pod = kubectl.get("pods", pod_name)
-            pull_secrets = pod["spec"].get("imagePullSecrets", "null")
-            print(pod_name)
-            if pull_secrets != "null":
-                for pull_secret in pull_secrets:
-                    token_name = pull_secret["name"]
-                    token = kubectl.get("secret", token_name)
-                    secret_base64 = token["data"].get(".dockerconfigjson", "")
-                    if not secret_base64:
-                        continue
-                    secret_dict = json.loads(base64.b64decode(secret_base64))
-                    hostname = list(secret_dict["auths"].keys())[0]
-                    username = secret_dict["auths"][hostname]["username"]
-                    password = secret_dict["auths"][hostname]["password"]
-                    try:
-                        login_result = docker.login(username, password=password, registry=hostname)
-                    except docker_module.errors.APIError as e:
-                        print(e)
-                        continue
-            try:
-                for lines in docker_api.pull(image_name, stream=True):
-                    for line in lines.splitlines():
-                        print(line)
-            except docker_module.errors.NotFound as e:
-                print(e)
-            pulled = True
-            break
-
-    print("-" * 40)
-
-    print("checking running pods")
-    print()
-    for pod in kubectl.get("pods")["items"]:
         image_name = pod["status"]["containerStatuses"][0]["image"]
+        digest = re.sub("^.*@", "", pod["status"]["containerStatuses"][0].get("imageID", ""))
 
+        if not image_name in image2digest2pods:
+            image2digest2pods[image_name] = {}
+        if not digest in image2digest2pods[image_name]:
+            image2digest2pods[image_name][digest] = []
+        image2digest2pods[image_name][digest].append(pod)
+
+    # print(json.dumps(image2digest2pods, indent=4, default=str))
+
+    print("\nchecking remote repositories, fetching repodigest for images")
+
+    for image_name in image2digest2pods:
         print()
-        print("%s [%s]" % (pod["metadata"]["name"], image_name))
+        print(image_name)
 
-        imageid_of_container = ""
-        try:
-            imageid_of_container = pod["status"]["containerStatuses"][0].get("imageID", "").replace("docker-pullable://", "")
-        except Exception as e:
-            print(e)
-            print("no image id for %s found in pod status, skipping..." % image_name)
+        host = namespace = repo = tag = ""
+        repo, tag = image_name.rsplit(":", 1)
+        if "/" in repo:
+            namespace, repo = repo.rsplit("/", 1)
+        if "/" in namespace:
+            host, namespace = namespace.rsplit("/", 1)
+
+        creds = ""
+        for digest, pods in image2digest2pods[image_name].items():
+            if creds: break
+            for pod in pods:
+                if creds: break
+                pull_secrets = pod["spec"].get("imagePullSecrets", "null")
+                if pull_secrets != "null":
+                    for pull_secret in pull_secrets:
+                        token_name = pull_secret["name"]
+                        token = kubectl.get("secret", token_name)
+                        secret_base64 = token["data"].get(".dockerconfigjson", "")
+                        if not secret_base64:
+                            continue
+                        secret_dict = json.loads(base64.b64decode(secret_base64))
+                        hostname = list(secret_dict["auths"].keys())[0]
+                        username = secret_dict["auths"][hostname]["username"]
+                        password = secret_dict["auths"][hostname]["password"]
+                        # print("pull secret found: using username {}".format(username))
+                        creds="{}:{}".format(username, password)
+                        break
+
+        raw_result = subprocess.run(
+            filter(None,
+                ["skopeo", "inspect", "--creds={}".format(creds) if creds else None, "docker://{}/{}/{}:{}".format(
+                    host if host else "docker.io",
+                    namespace if namespace else "library",
+                    repo,
+                    tag
+                )]
+            ),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+        repodigest = ""
+        if raw_result.returncode == 0:
+            result = json.loads(raw_result.stdout)
+            repodigest = result["Digest"]
+            # print(repodigest)
+            for pod in image2digest2pods[image_name].get(repodigest, []):
+                print("uptodate: pod/{}".format(pod["metadata"]["name"]))
+            for digest in image2digest2pods.get(image_name, {}):
+                if digest == repodigest:
+                    continue
+                for pod in image2digest2pods[image_name][digest]:
+                    pod_name = pod["metadata"]["name"]
+                    print("outdated! pod/{}".format(pod_name))
+                    print("repodigest of pod: {}".format(digest))
+                    print("newest repodigest: {}".format(repodigest))
+
+                    pull_always = pod["status"]["containerStatuses"][0].get("imagePullPolicy") == "Always"
+                    tag_latest = image_name.endswith(":latest")
+                    if (pull_always or tag_latest):
+                        kubectl.delete("pod", pod_name)
+                    else:
+                        print("consider replacing it!")
+
+        else:
+            print("[WARN] {}".format(raw_result.stderr))
             continue
 
-        imageid_from_registry = ""
-        try:
-            image = docker.images.get(image_name)
-            imageid_from_registry = image.attrs["RepoDigests"][0]
-        except Exception as e:
-            print(e)
-            print("no image id for %s found in local registry, skipping..." % image_name)
-            continue
-
-        if (imageid_of_container != imageid_from_registry):
-            print("image id of container: %s" % imageid_of_container)
-            print(" image id of registry: %s" % imageid_from_registry)
-            print("IMAGE ID MISMATCH! DESTROYING %s!" % pod["metadata"]["name"])
-            kubectl.delete("pod", pod["metadata"]["name"])
-
-    print("done")
+    print("\ndone")
 kind: ConfigMap
 metadata:
   creationTimestamp: null
