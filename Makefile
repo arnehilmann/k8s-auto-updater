@@ -21,7 +21,7 @@ templates/scripts.yaml:	src/sync-pods
     	--dry-run -o yaml > $@
 
 image:	docker/
-	docker build -t arne/kubectldocker:latest docker
-	docker push arne/kubectldocker:latest
+	docker build -t arne/kubectlskopeo:latest docker
+	docker push arne/kubectlskopeo:latest
 
 .PHONY: package repo all image

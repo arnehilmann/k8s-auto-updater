@@ -19,27 +19,18 @@ spec:
           serviceAccountName: auto-updater
 
           containers:
-          - image: arne/kubectldocker
+          - image: arne/kubectlskopeo
             name: auto-updater
             imagePullPolicy: Always
 
-            # command: ["sleep", "356d"]
             command: ["sync-pods"]
 
             volumeMounts:
-              - name: docker
-                mountPath: /var/run/docker.sock
-                readOnly: true
-
               - name: scripts
                 mountPath: /usr/local/bin/sync-pods
                 subPath: sync-pods
 
           volumes:
-          - name: docker
-            hostPath:
-              path: /var/run/docker.sock
-
           - name: scripts
             configMap:
               name: auto-updater-scripts
@@ -47,4 +38,4 @@ spec:
 
           restartPolicy: Never
       backoffLimit: 1
-      activeDeadlineSeconds: 300
+      activeDeadlineSeconds: {{ .Values.activeDeadlineSeconds }}
