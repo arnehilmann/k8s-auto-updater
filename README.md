@@ -6,16 +6,14 @@ auto-update your cluster: sync your docker images and restart pods running on ou
 
 *bad things could happen: service downtime, permanent pod restarts, hailstorms, ... You have been warned!*
 
-find the current chart index at
-[https://arnehilmann.github.io/k8s-auto-updater/index.yaml](https://arnehilmann.github.io/k8s-auto-updater/index.yaml)
 
-## Description
+## description
 
 **in your cluster**
 `k8s-auto-updater` runs as a cronjob inside your kubernetes-cluster.
 
 **with the authority**
-`k8s-auto-updater` uses `skopeo` and `kubectl`, and
+`k8s-auto-updater` uses [`skopeo`](https://github.com/containers/skopeo) and `kubectl`, and
 is allowed to list, get, and delete pods and to get secrets (per RBAC definition).
 
 **gathering image names and its digests**
@@ -69,6 +67,15 @@ helm install --name auto-updater k8s-a-u-chart/k8s-auto-updater --set schedule="
 ```
 helm delete auto-updater
 ```
+
+
+## quick links
+
+find the current chart index at
+[https://arnehilmann.github.io/k8s-auto-updater/index.yaml](https://arnehilmann.github.io/k8s-auto-updater/index.yaml)
+
+find the docker image at
+[https://hub.docker.com/r/arne/kubectlskopeo/](https://hub.docker.com/r/arne/kubectlskopeo/)
 
 
 ## TODO
