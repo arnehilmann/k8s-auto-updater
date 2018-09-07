@@ -6,7 +6,7 @@ chart:	package repo
 
 repo:	docs/index.yaml
 
-docs/index.yaml:	docs/*.tgz
+docs/index.yaml:	package
 	helm repo index docs --merge docs/index.yaml
 
 package:	templates/scripts.yaml
@@ -24,4 +24,4 @@ image:	docker/
 	docker build -t arne/kubectlskopeo:latest docker
 	docker push arne/kubectlskopeo:latest
 
-.PHONY: package repo all image
+.PHONY: all chart repo package image
