@@ -15,6 +15,13 @@ data:
     CIRCUIT_BREAKER = False
 
 
+    def header(text, style="-"):
+        print()
+        print(style * len(text))
+        print(text)
+        print(style * len(text))
+
+
     def matches_pod(selectors, labels, name):
         selected = True
         for selector in selectors.split(","):
@@ -136,15 +143,15 @@ data:
                 continue
             count = 0
             for pod in image2digest2pods[image_name].get(repodigest, []):
-                print("uptodate: pod/{}".format(pod["metadata"]["name"]))
+                print("\tuptodate: pod/{}".format(pod["metadata"]["name"]))
             for digest in image2digest2pods.get(image_name, {}):
                 if digest == repodigest:
                     continue
                 for pod in image2digest2pods[image_name][digest]:
                     pod_name = pod["metadata"]["name"]
-                    print("outdated: pod/{}".format(pod_name))
-                    print("\trepodigest of pod: {}".format(digest))
-                    print("\tnewest repodigest: {}".format(repodigest))
+                    print("\toutdated: pod/{}".format(pod_name))
+                    print("\t\trepodigest of pod: {}".format(digest))
+                    print("\t\tnewest repodigest: {}".format(repodigest))
 
                     pull_always = pod["status"]["containerStatuses"][0].get("imagePullPolicy") == "Always"
                     tag_latest = image_name.endswith(":latest")
@@ -163,7 +170,8 @@ data:
 
 
     if __name__ == "__main__":
-        print("\nauto-updater\nsyncing pods and images against local and remote registry\n")
+        header("auto-updater", "=")
+        print("syncing pods and images against local and remote registry\n")
 
         image_regexp = os.getenv("IMAGE_REGEXP", ".*")
         pod_selectors = os.getenv("POD_SELECTOR", "auto-update=enabled")
@@ -174,13 +182,13 @@ data:
             print("cannot read NR_PODS_TO_DELETE from env:", e)
             sys.exit(1)
 
+        header("fetching pods, current repodigest and image name")
         print("\timage regexp: {}".format(image_regexp))
         print("\tpod selectors: {}".format(pod_selectors))
 
-        print("\nfetching pods, current repodigest and image name")
         data = collect_data(image_regexp, pod_selectors)
 
-        print("\nchecking remote repositories, deleting outdated pods")
+        header("checking remote repositories, deleting outdated pods")
         print("\tnr of outdated pods to be deleted per image: {}".format(nr_pods_to_delete))
         check_pods(data)
 

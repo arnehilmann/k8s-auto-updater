@@ -2,10 +2,10 @@ apiVersion: v1
 entries:
   k8s-auto-updater:
   - apiVersion: v1
-    created: 2018-09-10T14:48:01.22283441+02:00
+    created: 2018-09-10T15:36:16.523544725+02:00
     description: 'auto-update your cluster: sync your docker images and restart pods
       running on outdated images'
-    digest: b7bcea2060e1fafcf357d6e21906b4f944b0b103d243a2aa3c7c539d2a0c5913
+    digest: 937d06e05dfdcd6227709e494c98d37848bf53de671f79979c0e8e6bbd5a8368
     home: https://github.com/arnehilmann/k8s-auto-updater
     keywords:
     - cluster
@@ -22,7 +22,7 @@ entries:
     - k8s-auto-updater-0.1.0.tgz
     version: 0.1.0
   - apiVersion: v1
-    created: 2018-09-10T14:48:01.222351228+02:00
+    created: 2018-09-10T15:36:16.52307649+02:00
     description: 'auto-update your cluster: sync your docker images and restart pods
       running on outdated images'
     digest: d71ecf189561e3b859061a7429a1b9dec61857a676a51e97b05ab18608222fe6
@@ -41,4 +41,4 @@ entries:
     urls:
     - k8s-auto-updater-0.0.5.tgz
     version: 0.0.5
-generated: 2018-09-10T14:48:01.221625423+02:00
+generated: 2018-09-10T15:36:16.52238245+02:00
