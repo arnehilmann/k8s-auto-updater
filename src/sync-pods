@@ -12,11 +12,11 @@ import sys
 CIRCUIT_BREAKER = False
 
 
-def header(text, style="-"):
-    print()
-    print(style * len(text))
+def header(text, style="-", min_length=60):
+    print(".")
+    print(style * max(min_length, len(text)))
     print(text)
-    print(style * len(text))
+    print(style * max(min_length, len(text)))
 
 
 def matches_pod(selectors, labels, name):
@@ -168,7 +168,7 @@ def check_pods(image2digest2pods):
 
 if __name__ == "__main__":
     header("auto-updater", "=")
-    print("syncing pods and images against local and remote registry\n")
+    print(".\nsyncing pods and images against local and remote registry\n")
 
     image_regexp = os.getenv("IMAGE_REGEXP", ".*")
     pod_selectors = os.getenv("POD_SELECTOR", "auto-update=enabled")
@@ -189,4 +189,4 @@ if __name__ == "__main__":
     print("\tnr of outdated pods to be deleted per image: {}".format(nr_pods_to_delete))
     check_pods(data)
 
-    print("\ndone")
+    print(".\ndone.")
