@@ -77,11 +77,16 @@ helm install --name auto-updater \
 ## notes
 
 * Setting `nrPodsToDelete` to a value greater/equal to your replica settings will result in a complete loss
-of all pods running on an outdadet image, potentially resulting in a **downtime**.
+of all pods running on an outdated image, potentially resulting in service downtimes.
 * Clearing the `podSelector` variable might be a bad idea
 (i.e. **all** pods, including system pods and auto-updater itself, get selected)!
 * You can narrow the searched repositories by setting `imageRegExp`;
-you can use multiple patterns with the `pattern1|pattern2` notation.
+you can use multiple patterns with the `pattern1|pattern2` notation; e.g.
+`... --set imageRegExp='arne/d.*|gitlab.*'`.
+* when referencing images on `docker.io`, the host part of the image name is empty
+(e.g. `arne/k8s-auto-updater` instead of `docker.io/arne/k8s-auto-updater`).
+* when referencing official images on `docker.io`, the host and repo parts are empty
+(e.g. `mysql` instead of `docker.io/library/mysql`).
 
 
 ## cleanup
