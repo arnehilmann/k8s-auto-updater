@@ -80,7 +80,8 @@ find the docker image at
 
 ## TODO
 
-- [ ] allow selector for pod selection
+- [ ] allow selector for pods, images, registries
+- [ ] specify how many pods per run may be deleted
 - [x] allow image sync for remote registries which do not need PullSecrets
 - [ ] provide endpoint for triggering manually
 - [x] only delete pod when image pull enabled (imageTag eq latest or imagePullPolicy Always)
