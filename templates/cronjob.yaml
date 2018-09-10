@@ -14,6 +14,7 @@ spec:
         metadata:
           labels:
             app: auto-updater-job
+            auto-update: never
         spec:
 
           serviceAccountName: auto-updater
@@ -24,6 +25,14 @@ spec:
             imagePullPolicy: Always
 
             command: ["sync-pods"]
+
+            env:
+              - name: POD_SELECTOR
+                value: {{ .Values.podSelector }}
+              - name: IMAGE_REGEXP
+                value: {{ .Values.imageRegExp }}
+              - name: NR_PODS_TO_DELETE
+                value: {{ .Values.nrPodsToDelete }}
 
             volumeMounts:
               - name: scripts
