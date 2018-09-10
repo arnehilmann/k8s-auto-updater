@@ -28,11 +28,11 @@ spec:
 
             env:
               - name: POD_SELECTOR
-                value: {{ .Values.podSelector }}
+                value: {{ .Values.podSelector | quote }}
               - name: IMAGE_REGEXP
-                value: {{ .Values.imageRegExp }}
+                value: {{ .Values.imageRegExp | quote }}
               - name: NR_PODS_TO_DELETE
-                value: {{ .Values.nrPodsToDelete }}
+                value: {{ .Values.nrPodsToDelete | quote }}
 
             volumeMounts:
               - name: scripts

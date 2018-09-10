@@ -12,7 +12,7 @@ data:
     import re
     import sys
 
-    CIRCUIT_BREAKER = True
+    CIRCUIT_BREAKER = False
 
 
     def matches_pod(selectors, labels, name):
