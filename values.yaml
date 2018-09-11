@@ -1,6 +1,7 @@
 schedule: "*/10 * * * *"
 suspend: false
 activeDeadlineSeconds: 300
-podSelector: "auto-update=enabled"
+podSelector: auto-update=enabled
 imageRegExp: ".*"
 nrPodsToDelete: 1
+command: rolling-update

@@ -1,16 +1,6 @@
 apiVersion: v1
 data:
-  rolling-update: |
-    #!/usr/bin/env python
-
-    import sys\
-
-    from autoupdater import rollingupdate
-
-    sys.exit(rollingupdate.run())
-  sync-pods: |
-    #!/usr/bin/env python
-
+  __init__.py: |+
     from kubepy import api as kubectl
     import json
     import base64
@@ -20,14 +10,19 @@ data:
     import re
     import sys
 
-    CIRCUIT_BREAKER = False
-
 
     def header(text, style="-", min_length=60):
         print(".")
         print(style * max(min_length, len(text)))
         print(text)
         print(style * max(min_length, len(text)))
+
+
+    def get_first_owner(resource):
+        owners = resource["metadata"].get("ownerReferences", [])
+        if not owners:
+            return None
+        return kubectl.get(owners[0]["kind"], owners[0]["name"])
 
 
     def matches_pod(selectors, labels, name):
@@ -138,7 +133,7 @@ data:
         return result["Digest"]
 
 
-    def check_pods(image2digest2pods):
+    def check_pods(image2digest2pods, strategy):
         for image_name in image2digest2pods:
             print()
             print(image_name)
@@ -161,34 +156,65 @@ data:
                     print("\t\trepodigest of pod: {}".format(digest))
                     print("\t\tnewest repodigest: {}".format(repodigest))
 
-                    pull_always = pod["status"]["containerStatuses"][0].get("imagePullPolicy") == "Always"
-                    tag_latest = image_name.endswith(":latest")
-                    if (pull_always or tag_latest):
-                        if count < nr_pods_to_delete:
-                            if CIRCUIT_BREAKER:
-                                print("\tdelete {}".format(pod_name))
-                            else:
-                                print("\t", end="", flush=True)
-                                kubectl.delete("pod", pod_name)
-                            count += 1
-                        else:
-                            print("\tskipping delete of pod/{}: max nr of deleted pods reached".format(pod_name))
-                    else:
-                        print("\tskipping delete of pod/{}: pull of new image disabled (neither :latest nor imagePullPolicy Always)")
+                    if not strategy(**locals()):
+                        print("\t[WARN] something went wrong...")
 
 
-    if __name__ == "__main__":
+
+  rollingupdate.py: |
+    #!/usr/bin/env python
+    '''
+    trigger a rolling update on deployments when pods run on outdated images
+    '''
+
+    import os
+    import subprocess
+
+    from . import (header,
+                   collect_data,
+                   get_first_owner,
+                   check_pods)
+
+
+    def rolling_update_on_deployment(pod, pod_name, repodigest, **args):
+        '''
+        strategy for check_pods
+        '''
+        print(args.keys())
+
+        replica_set = get_first_owner(pod)
+        if not replica_set:
+            print("\tno owning replica set found for pod/{}, strange!".format(pod_name))
+            return False
+
+        deployment = get_first_owner(replica_set)
+        if not deployment:
+            print("\tno owning deployment found for replicaset/{}, strange!".format(
+                replica_set["metadata"]["name"]))
+            return False
+
+        print("\tsetting newestrepodigst to {} in deployment/{}".format(
+            repodigest, deployment["metadata"]["name"]))
+        raw_result = subprocess.run([
+            "kubectl", "set", "env",
+            "deployment/{}".format(deployment["metadata"]["name"]),
+            "newestrepodigest={}".format(repodigest)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if raw_result.returncode != 0:
+            print("\t[WARN] {}".format(raw_result.stderr))
+            return False
+
+        return True
+
+
+    def run():
+        '''
+        actually run the check with the rolling_update_on_deployment strategy
+        '''
         header("auto-updater", "=")
         print(".\nsyncing pods and images against local and remote registry\n")
 
         image_regexp = os.getenv("IMAGE_REGEXP", ".*")
         pod_selectors = os.getenv("POD_SELECTOR", "auto-update=enabled")
-        nr_pods_to_delete = 1
-        try:
-            nr_pods_to_delete = int(os.getenv("NR_PODS_TO_DELETE", nr_pods_to_delete))
-        except ValueError as e:
-            print("cannot read NR_PODS_TO_DELETE from env:", e)
-            sys.exit(1)
 
         header("fetching pods, current repodigest and image name")
         print("\timage regexp: {}".format(image_regexp))
@@ -197,11 +223,10 @@ data:
         data = collect_data(image_regexp, pod_selectors)
 
         header("checking remote repositories, deleting outdated pods")
-        print("\tnr of outdated pods to be deleted per image: {}".format(nr_pods_to_delete))
-        check_pods(data)
+        check_pods(data, rolling_update_on_deployment)
 
         print(".\ndone.")
 kind: ConfigMap
 metadata:
   creationTimestamp: null
-  name: auto-updater-scripts
+  name: auto-updater-package

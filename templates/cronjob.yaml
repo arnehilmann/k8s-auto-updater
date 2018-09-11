@@ -24,7 +24,7 @@ spec:
             name: auto-updater
             imagePullPolicy: Always
 
-            command: ["sync-pods"]
+            command: [{{ .Values.command | quote }}]
 
             env:
               - name: POD_SELECTOR
@@ -36,14 +36,18 @@ spec:
 
             volumeMounts:
               - name: scripts
-                mountPath: /usr/local/bin/sync-pods
-                subPath: sync-pods
+                mountPath: /usr/local/bin/
+              - name: package
+                mountPath: /usr/lib/python3.6/site-packages/autoupdater
 
           volumes:
           - name: scripts
             configMap:
               name: auto-updater-scripts
               defaultMode: 0744
+          - name: package
+            configMap:
+              name: auto-updater-package
 
           restartPolicy: Never
       backoffLimit: 1

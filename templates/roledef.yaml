@@ -8,7 +8,37 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: Role
 metadata:
-  name: auto-updater
+  name: rolling-update
+rules:
+  - apiGroups: ['']
+    resources:
+      - pods
+      - secrets
+    verbs:
+      - get
+  - apiGroups: ['']
+    resources:
+      - pods
+    verbs:
+      - list
+  - apiGroups: ['extensions']
+    resources:
+      - replicasets
+      - deployments
+    verbs:
+      - get
+  - apiGroups: ['extensions']
+    resources:
+      - deployments
+    verbs:
+      - patch
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: Role
+metadata:
+  name: delete-pods
 rules:
   - apiGroups: ['']
     resources:
@@ -34,4 +64,4 @@ subjects:
   name: auto-updater
 roleRef:
   kind: Role
-  name: auto-updater
+  name: {{ default .Values.command .Values.role }}
