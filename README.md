@@ -21,7 +21,7 @@ resource | verb
 pods     | list, get
 secrets  | get
 replicasets | get
-deployments | get, patch
+deployments | get, **patch**
 
 **gathering image names and its digests**
 `k8s-auto-updater` fetches all pods and corresponding image names:
@@ -30,9 +30,7 @@ deployments | get, patch
 
 **deleting pods**
 Then `k8s-auto-updater` iterates over selected pods, checking if the image id the pod was started on equals
-the image id referenced by the image name. If the image id of the pod differs, the 
-~pod gets deleted and
-(hopefully; assuming a ha-setup) a new pod gets created using the newly pulled image.~
+the image id referenced by the image name. If the image id of the pod differs, the
 owning replicaset and deployment get identified and then the deployment env gets patched, resulting
 in a new replicaset and thus newly started pods.
 
