@@ -1,18 +1,16 @@
 apiVersion: v1
 data:
-  __init__.py: |+
-    from kubepy import api as kubectl
-    import json
+  __init__.py: |
     import base64
-    import os
-    import subprocess
     import json
     import re
-    import sys
+    import subprocess
+
+    from kubepy import api as kubectl
 
 
     def header(text, style="-", min_length=60):
-        print(".")
+        print()
         print(style * max(min_length, len(text)))
         print(text)
         print(style * max(min_length, len(text)))
@@ -25,7 +23,7 @@ data:
         return kubectl.get(owners[0]["kind"], owners[0]["name"])
 
 
-    def matches_pod(selectors, labels, name):
+    def matches_pod(selectors, labels, name, verbose=False):
         selected = True
         for selector in selectors.split(","):
             if not selected:
@@ -46,17 +44,20 @@ data:
                 key = selector
                 if key and key not in labels:
                     selected = False
-            if not selected:
-                print("skipped: pod/{} not selected because unmet criteria '{}'".format(name, selector))
+            if verbose:
+                if not selected:
+                    print("skipped: pod/{} not selected because unmet criteria '{}'".format(name, selector))
         return selected
 
 
     def fetch_credentials(digest2pods):
         creds = ""
-        for digest, pods in digest2pods.items():
-            if creds: break
+        for _, pods in digest2pods.items():
+            if creds:
+                break
             for pod in pods:
-                if creds: break
+                if creds:
+                    break
                 pull_secrets = pod["spec"].get("imagePullSecrets", "null")
                 if pull_secrets != "null":
                     for pull_secret in pull_secrets:
@@ -69,7 +70,7 @@ data:
                         hostname = list(secret_dict["auths"].keys())[0]
                         username = secret_dict["auths"][hostname]["username"]
                         password = secret_dict["auths"][hostname]["password"]
-                        creds="{}:{}".format(username, password)
+                        creds = "{}:{}".format(username, password)
                         break
         return creds
 
@@ -84,32 +85,38 @@ data:
         return host, namespace, repo, tag
 
 
-    def matches_image(regexp, name):
+    def matches_image(regexp, name, verbose=False):
         if not re.match(regexp, name):
-            print("skipped: docker-image/{} not selected because regexp mismatch '{}'".format(name, regexp))
+            if verbose:
+                print("skipped: docker-image/{} skipped because missed regexp '{}'".format(name, regexp))
             return False
         return True
 
 
-    def collect_data(image_regexp, pod_selectors):
+    def collect_data(image_regexp, pod_selectors, verbose=False):
         image2digest2pods = {}
         for pod in kubectl.get("pods")["items"]:
-            image_name = pod["status"]["containerStatuses"][0]["image"]
+            for container in pod["status"]["containerStatuses"]:
+                image_name = container["image"]
 
-            if not matches_image(image_regexp, image_name):
-                continue
-            if not matches_pod(pod_selectors, pod["metadata"].get("labels", {}), pod["metadata"]["name"]):
-                continue
+                if not matches_image(image_regexp, image_name, verbose):
+                    continue
+                if not matches_pod(pod_selectors,
+                                   pod["metadata"].get("labels", {}),
+                                   pod["metadata"]["name"],
+                                   verbose):
+                    continue
 
-            digest = re.sub("^.*@", "", pod["status"]["containerStatuses"][0].get("imageID", ""))
-            if not image_name in image2digest2pods:
-                image2digest2pods[image_name] = {}
-            if not digest in image2digest2pods[image_name]:
-                image2digest2pods[image_name][digest] = []
-            image2digest2pods[image_name][digest].append(pod)
+                digest = re.sub("^.*@", "", container.get("imageID", ""))
+                if image_name not in image2digest2pods:
+                    image2digest2pods[image_name] = {}
+                if digest not in image2digest2pods[image_name]:
+                    image2digest2pods[image_name][digest] = []
+                image2digest2pods[image_name][digest].append(pod)
 
-        for image in image2digest2pods:
-            print("selected: docker-image/{}".format(image))
+        if verbose:
+            for image in image2digest2pods:
+                print("selected: docker-image/{}".format(image))
 
         return image2digest2pods
 
@@ -117,13 +124,15 @@ data:
     def query_repodigst(host, namespace, repo, tag, creds):
         raw_result = subprocess.run(
             filter(None,
-                ["skopeo", "inspect", "--creds={}".format(creds) if creds else None, "docker://{}/{}/{}:{}".format(
-                    host if host else "docker.io",
-                    namespace if namespace else "library",
-                    repo,
-                    tag
-                )]
-            ),
+                   ["skopeo",
+                    "inspect",
+                    "--creds={}".format(creds) if creds else None,
+                    "docker://{}/{}/{}:{}".format(
+                        host if host else "docker.io",
+                        namespace if namespace else "library",
+                        repo,
+                        tag
+                    )]),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
         if raw_result.returncode != 0:
@@ -133,7 +142,7 @@ data:
         return result["Digest"]
 
 
-    def check_pods(image2digest2pods, strategy):
+    def check_pods(image2digest2pods, strategy, verbose=False):
         for image_name in image2digest2pods:
             print()
             print(image_name)
@@ -144,23 +153,21 @@ data:
             repodigest = query_repodigst(host, namespace, repo, tag, creds)
             if not repodigest:
                 continue
-            count = 0
-            for pod in image2digest2pods[image_name].get(repodigest, []):
-                print("\tuptodate: pod/{}".format(pod["metadata"]["name"]))
+            if verbose:
+                for pod in image2digest2pods[image_name].get(repodigest, []):
+                    print("\tuptodate: pod/{}".format(pod["metadata"]["name"]))
             for digest in image2digest2pods.get(image_name, {}):
                 if digest == repodigest:
                     continue
                 for pod in image2digest2pods[image_name][digest]:
                     pod_name = pod["metadata"]["name"]
                     print("\toutdated: pod/{}".format(pod_name))
-                    print("\t\trepodigest of pod: {}".format(digest))
-                    print("\t\tnewest repodigest: {}".format(repodigest))
+                    if verbose:
+                        print("\t\trepodigest of pod: {}".format(digest))
+                        print("\t\tnewest repodigest: {}".format(repodigest))
 
                     if not strategy(**locals()):
                         print("\t[WARN] something went wrong...")
-
-
-
   rollingupdate.py: |
     #!/usr/bin/env python
     '''
@@ -176,32 +183,37 @@ data:
                    check_pods)
 
 
-    def rolling_update_on_deployment(pod, pod_name, repodigest, **args):
+    def rolling_update_on_deployment(pod, pod_name, repodigest, patched={}, verbose=False, **args):
         '''
         strategy for check_pods
         '''
-        print(args.keys())
+        # print(args.keys())
 
         replica_set = get_first_owner(pod)
         if not replica_set:
-            print("\tno owning replica set found for pod/{}, strange!".format(pod_name))
+            print("\t\tno owning replica set found for pod/{}, strange!".format(pod_name))
             return False
 
         deployment = get_first_owner(replica_set)
         if not deployment:
-            print("\tno owning deployment found for replicaset/{}, strange!".format(
+            print("\t\tno owning deployment found for replicaset/{}, strange!".format(
                 replica_set["metadata"]["name"]))
             return False
 
-        print("\tsetting newestrepodigst to {} in deployment/{}".format(
-            repodigest, deployment["metadata"]["name"]))
+        deployment_name = deployment["metadata"]["name"]
+        if deployment_name in patched:
+            if verbose:
+                print("\t\tdeployment/{} was already patched, skipping".format(deployment_name))
+            return True
+        print("\t\tpatching newestrepodigst in deployment/{}".format(deployment_name))
         raw_result = subprocess.run([
             "kubectl", "set", "env",
-            "deployment/{}".format(deployment["metadata"]["name"]),
+            "deployment/{}".format(deployment_name),
             "newestrepodigest={}".format(repodigest)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if raw_result.returncode != 0:
-            print("\t[WARN] {}".format(raw_result.stderr))
+            print("\t\t[WARN] {}".format(raw_result.stderr))
             return False
+        patched[deployment_name] = True
 
         return True
 
@@ -210,22 +222,25 @@ data:
         '''
         actually run the check with the rolling_update_on_deployment strategy
         '''
-        header("auto-updater", "=")
-        print(".\nsyncing pods and images against local and remote registry\n")
+        header("k8s-auto-updater", "=")
+        print("\nsyncing pods and images against local and remote registry")
+        print("(see https://github.com/arnehilmann/k8s-auto-updater)\n")
 
         image_regexp = os.getenv("IMAGE_REGEXP", ".*")
         pod_selectors = os.getenv("POD_SELECTOR", "auto-update=enabled")
+        verbose = str(os.getenv("VERBOSE", "")).lower() in ("true", "yes", "1")
 
         header("fetching pods, current repodigest and image name")
-        print("\timage regexp: {}".format(image_regexp))
-        print("\tpod selectors: {}".format(pod_selectors))
+        print("IMAGE_REGEXP: {}".format(image_regexp))
+        print("POD_SELECTOR: {}".format(pod_selectors))
+        print("     VERBOSE: {}".format(verbose))
 
-        data = collect_data(image_regexp, pod_selectors)
+        data = collect_data(image_regexp, pod_selectors, verbose)
 
-        header("checking remote repositories, deleting outdated pods")
-        check_pods(data, rolling_update_on_deployment)
+        header("checking remote repositories, patching deployments of outdated pods")
+        check_pods(data, rolling_update_on_deployment, verbose)
 
-        print(".\ndone.")
+        print("\ndone.")
 kind: ConfigMap
 metadata:
   creationTimestamp: null
