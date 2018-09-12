@@ -29,8 +29,12 @@ def rolling_update_on_deployment(pod, pod_name, repodigest, patched={}, verbose=
             replica_set["metadata"]["name"]))
         return False
 
-    print("\tsetting newestrepodigst to {} in deployment/{}".format(
-        repodigest, deployment["metadata"]["name"]))
+    deployment_name = deployment["metadata"]["name"]
+    if deployment_name in patched:
+        if verbose:
+            print("\t\tdeployment/{} was already patched, skipping".format(deployment_name))
+        return True
+    print("\t\tpatching newestrepodigst in deployment/{}".format(deployment_name))
     raw_result = subprocess.run([
         "kubectl", "set", "env",
         "deployment/{}".format(deployment_name),
@@ -38,6 +42,7 @@ def rolling_update_on_deployment(pod, pod_name, repodigest, patched={}, verbose=
     if raw_result.returncode != 0:
         print("\t\t[WARN] {}".format(raw_result.stderr))
         return False
+    patched[deployment_name] = True
 
     return True
 
