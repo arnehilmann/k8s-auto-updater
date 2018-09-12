@@ -33,6 +33,8 @@ spec:
                 value: {{ .Values.imageRegExp | quote }}
               - name: NR_PODS_TO_DELETE
                 value: {{ .Values.nrPodsToDelete | quote }}
+              - name: VERBOSE
+                value: {{ .Values.verbose | quote }}
 
             volumeMounts:
               - name: scripts

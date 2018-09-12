@@ -67,6 +67,7 @@ suspend               | false               | should `k8s-auto-updater` run on s
 activeDeadlineSeconds | 300                 | hard timeout for the job
 podSelector           | auto-update=enabled | select pods based on labels; supports '=', '!='
 imageRegExp           | .\*                 | regular expression for matching docker images
+verbose               | false               | produce more detailed log output
 
 **example:**
 ```
