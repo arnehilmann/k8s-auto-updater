@@ -26,10 +26,10 @@ helm install --name auto-updater \
 `k8s-auto-updater` uses [`skopeo`](https://github.com/containers/skopeo) and `kubectl`, and
 has the following permissions:
 
-resource | verb
--------- | ----
-pods     | list, get
-secrets  | get
+resource    | verb
+----------- | ----
+pods        | list, get
+secrets     | get
 replicasets | get
 deployments | get, **patch**
 
@@ -60,13 +60,13 @@ helm install --name auto-updater k8s-a-u-chart/k8s-auto-updater
 
 The following parameters could be set via `--set`:
 
-parameter | default | description
---------- | ------- | -----------
-schedule | \*/10 \* \* \* \* | when to run `k8s-auto-updater`, uses [cron syntax](https://en.wikipedia.org/wiki/Cron#Overview)
-suspend  | false             | should `k8s-auto-updater` run on startup or stay in suspend mode
-activeDeadlineSeconds | 300 | hard timeout for the job
-podSelector | auto-update=enabled | select pods based on labels; supports '=', '!='
-imageRegExp | .\* | regular expression for matching docker images
+parameter             | default             | description
+--------------------- | ------------------- | -----------
+schedule              | \*/10 \* \* \* \*   | when to run `k8s-auto-updater`, uses [cron syntax](https://en.wikipedia.org/wiki/Cron#Overview)
+suspend               | false               | should `k8s-auto-updater` run on startup or stay in suspend mode
+activeDeadlineSeconds | 300                 | hard timeout for the job
+podSelector           | auto-update=enabled | select pods based on labels; supports '=', '!='
+imageRegExp           | .\*                 | regular expression for matching docker images
 
 **example:**
 ```
