@@ -1,6 +1,6 @@
 # k8s-auto-updater
 
-auto-update your cluster: sync your docker images and restart pods running on outdated images
+auto-update your cluster: check your pods for outdated images, trigger rolling deployment of new pods when needed
 
 **!!! DO NOT USE IN A PRODUCTION ENVIRONMENT !!!**
 
@@ -11,7 +11,7 @@ auto-update your cluster: sync your docker images and restart pods running on ou
 
 ```
 helm install --name auto-updater \
-    https://arnehilmann.github.io/k8s-auto-updater/k8s-auto-updater-0.1.1.tgz \
+    https://arnehilmann.github.io/k8s-auto-updater/k8s-auto-updater-0.2.0.tgz \
     --set podSelector=
 # cross fingers
 ```
@@ -38,7 +38,7 @@ deployments | get, **patch**
 1) image name must match `imageRegExp` (default: `.*`, see #Notes)
 2) pod labels must match `podSelector` (default: `auto-update=enabled`, see #Notes).
 
-**deleting pods**
+**rolling update of deployments**
 Then `k8s-auto-updater` iterates over selected pods, checking if the image id the pod was started on equals
 the image id referenced by the image name. If the image id of the pod differs, the
 owning replicaset and deployment get identified and then the deployment env gets patched, resulting
