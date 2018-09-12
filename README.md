@@ -7,6 +7,16 @@ auto-update your cluster: sync your docker images and restart pods running on ou
 *bad things could happen: service downtime, permanent pod restarts, hailstorms, ... You have been warned!*
 
 
+## tl;dr
+
+```
+helm install --name auto-updater \
+    https://arnehilmann.github.io/k8s-auto-updater/k8s-auto-updater-0.1.1.tgz \
+    --set podSelector=
+# cross fingers
+```
+
+
 ## description
 
 **in your cluster**
@@ -33,16 +43,6 @@ Then `k8s-auto-updater` iterates over selected pods, checking if the image id th
 the image id referenced by the image name. If the image id of the pod differs, the
 owning replicaset and deployment get identified and then the deployment env gets patched, resulting
 in a new replicaset and thus newly started pods.
-
-
-## tl;dr
-
-```
-helm install --name auto-updater \
-    https://arnehilmann.github.io/k8s-auto-updater/k8s-auto-updater-0.1.1.tgz \
-    --set podSelector=
-# cross fingers
-```
 
 
 ## setup
