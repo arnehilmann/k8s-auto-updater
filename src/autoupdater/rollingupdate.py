@@ -51,14 +51,15 @@ def run():
 
     image_regexp = os.getenv("IMAGE_REGEXP", ".*")
     pod_selectors = os.getenv("POD_SELECTOR", "auto-update=enabled")
+    verbose = str(os.getenv("VERBOSE", "")).lower() in ("true", "yes", "1")
 
     header("fetching pods, current repodigest and image name")
     print("\timage regexp: {}".format(image_regexp))
     print("\tpod selectors: {}".format(pod_selectors))
 
-    data = collect_data(image_regexp, pod_selectors)
+    data = collect_data(image_regexp, pod_selectors, verbose)
 
     header("checking remote repositories, deleting outdated pods")
-    check_pods(data, rolling_update_on_deployment)
+    check_pods(data, rolling_update_on_deployment, verbose)
 
     print(".\ndone.")

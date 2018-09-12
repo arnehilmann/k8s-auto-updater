@@ -7,7 +7,7 @@ from kubepy import api as kubectl
 
 
 def header(text, style="-", min_length=60):
-    print(".")
+    print()
     print(style * max(min_length, len(text)))
     print(text)
     print(style * max(min_length, len(text)))
@@ -20,7 +20,7 @@ def get_first_owner(resource):
     return kubectl.get(owners[0]["kind"], owners[0]["name"])
 
 
-def matches_pod(selectors, labels, name):
+def matches_pod(selectors, labels, name, verbose=False):
     selected = True
     for selector in selectors.split(","):
         if not selected:
@@ -41,8 +41,9 @@ def matches_pod(selectors, labels, name):
             key = selector
             if key and key not in labels:
                 selected = False
-        if not selected:
-            print("skipped: pod/{} not selected because unmet criteria '{}'".format(name, selector))
+        if verbose:
+            if not selected:
+                print("skipped: pod/{} not selected because unmet criteria '{}'".format(name, selector))
     return selected
 
 
@@ -81,34 +82,38 @@ def split_image_name(image_name):
     return host, namespace, repo, tag
 
 
-def matches_image(regexp, name):
+def matches_image(regexp, name, verbose=False):
     if not re.match(regexp, name):
-        # print("skipped: docker-image/{} skipped because missed regexp '{}'".format(name, regexp))
+        if verbose:
+            print("skipped: docker-image/{} skipped because missed regexp '{}'".format(name, regexp))
         return False
     return True
 
 
-def collect_data(image_regexp, pod_selectors):
+def collect_data(image_regexp, pod_selectors, verbose=False):
     image2digest2pods = {}
     for pod in kubectl.get("pods")["items"]:
-        image_name = pod["status"]["containerStatuses"][0]["image"]
+        for container in pod["status"]["containerStatuses"]:
+            image_name = container["image"]
 
-        if not matches_image(image_regexp, image_name):
-            continue
-        if not matches_pod(pod_selectors,
-                           pod["metadata"].get("labels", {}),
-                           pod["metadata"]["name"]):
-            continue
+            if not matches_image(image_regexp, image_name, verbose):
+                continue
+            if not matches_pod(pod_selectors,
+                               pod["metadata"].get("labels", {}),
+                               pod["metadata"]["name"],
+                               verbose):
+                continue
 
-        digest = re.sub("^.*@", "", pod["status"]["containerStatuses"][0].get("imageID", ""))
-        if image_name not in image2digest2pods:
-            image2digest2pods[image_name] = {}
-        if digest not in image2digest2pods[image_name]:
-            image2digest2pods[image_name][digest] = []
-        image2digest2pods[image_name][digest].append(pod)
+            digest = re.sub("^.*@", "", container.get("imageID", ""))
+            if image_name not in image2digest2pods:
+                image2digest2pods[image_name] = {}
+            if digest not in image2digest2pods[image_name]:
+                image2digest2pods[image_name][digest] = []
+            image2digest2pods[image_name][digest].append(pod)
 
-    for image in image2digest2pods:
-        print("selected: docker-image/{}".format(image))
+    if verbose:
+        for image in image2digest2pods:
+            print("selected: docker-image/{}".format(image))
 
     return image2digest2pods
 
@@ -134,7 +139,7 @@ def query_repodigst(host, namespace, repo, tag, creds):
     return result["Digest"]
 
 
-def check_pods(image2digest2pods, strategy):
+def check_pods(image2digest2pods, strategy, verbose=False):
     for image_name in image2digest2pods:
         print()
         print(image_name)
@@ -145,16 +150,18 @@ def check_pods(image2digest2pods, strategy):
         repodigest = query_repodigst(host, namespace, repo, tag, creds)
         if not repodigest:
             continue
-        for pod in image2digest2pods[image_name].get(repodigest, []):
-            print("\tuptodate: pod/{}".format(pod["metadata"]["name"]))
+        if verbose:
+            for pod in image2digest2pods[image_name].get(repodigest, []):
+                print("\tuptodate: pod/{}".format(pod["metadata"]["name"]))
         for digest in image2digest2pods.get(image_name, {}):
             if digest == repodigest:
                 continue
             for pod in image2digest2pods[image_name][digest]:
                 pod_name = pod["metadata"]["name"]
                 print("\toutdated: pod/{}".format(pod_name))
-                print("\t\trepodigest of pod: {}".format(digest))
-                print("\t\tnewest repodigest: {}".format(repodigest))
+                if verbose:
+                    print("\t\trepodigest of pod: {}".format(digest))
+                    print("\t\tnewest repodigest: {}".format(repodigest))
 
                 if not strategy(**locals()):
                     print("\t[WARN] something went wrong...")
